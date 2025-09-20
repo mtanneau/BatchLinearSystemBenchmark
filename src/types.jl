@@ -6,16 +6,100 @@ using CUDA.CUSPARSE
 using CUDSS
 using NVTX
 
+import Base.parse
+import Base.string
+
+@enum MatrixType begin
+    MatrixType_GEN = 0
+    MatrixType_SYM = 10
+    MatrixType_SPD = 11
+    MatrixType_HER = 20
+    MatrixType_HPD = 21
+end
+
+function MatrixType(s::AbstractString)::MatrixType
+    if s == "GEN"
+        return MatrixType_GEN
+    elseif s == "SYM"
+        return MatrixType_SYM
+    elseif s == "SPD"
+        return MatrixType_SPD
+    elseif s == "HER"
+        return MatrixType_HER
+    elseif s == "HPD"
+        return MatrixType_HPD
+    else
+        error("Invalid MatrixType string: $(s)")
+    end
+end
+
+function Base.string(mt::MatrixType)::String
+    if mt == MatrixType_GEN
+        return "GEN"
+    elseif mt == MatrixType_SYM
+        return "SYM"
+    elseif mt == MatrixType_SPD
+        return "SPD"
+    elseif mt == MatrixType_HER
+        return "HER"
+    elseif mt == MatrixType_HPD
+        return "HPD"
+    end
+end
+
+@enum MatrixViewType begin
+    MatrixView_Full = 0
+    MatrixView_Lower = 1
+    MatrixView_Upper = 2
+end
+
+function MatrixViewType(s::AbstractString)::MatrixViewType
+    if s == "Full" || s == "F"
+        return MatrixView_Full
+    elseif s == "Lower" || s == "L"
+        return MatrixView_Lower
+    elseif s == "Upper" || s == "U"
+        return MatrixView_Upper
+    else
+        error("Invalid MatrixViewType string: $(s)")
+    end
+end
+
+function Base.string(mv::MatrixViewType)::String
+    if mv == MatrixView_Full
+        return "F"
+    elseif mv == MatrixView_Lower
+        return "L"
+    elseif mv == MatrixView_Upper
+        return "U"
+    end
+end
+
 struct BatchLinearSystemCPU{T}
+    nbatch::Int
+    is_uniform::Bool
+    mtype::MatrixType
+    mview::MatrixViewType
+
     As::Vector{SparseMatrixCSC{T,Int}} # Vector of sparse matrices (LHS)
     bs::Vector{Vector{T}}              # Vector of (dense) RHS
     xs::Vector{Vector{T}}              # Vector of (dense) solutions
 end
 
+function _is_uniform_batch(As::Vector{SparseMatrixCSC{T,Ti}}) where{T, Ti}
+    return allequal(size, As) && allequal(x -> x.colptr, As) && allequal(x -> x.rowval, As)
+end
+
 function BatchLinearSystemCPU(As::Vector{SparseMatrixCSC{T,Int}}, bs::Vector{Vector{T}}) where T
     length(As) == length(bs) || throw(DimensionMismatch("Length of As and bs must be equal"))
-    xs = [zeros(T, size(b)) for b in bs]
-    return BatchLinearSystemCPU{T}(As, bs, xs)
+    nbatch = length(As)
+
+    is_uniform = _is_uniform_batch(As)
+    mt = MatrixType_GEN
+    mv = MatrixView_Full
+
+    xs = [zeros(T, size(A, 2)) for A in As]
+    return BatchLinearSystemCPU{T}(nbatch, is_uniform, mt, mv, As, bs, xs)
 end
 
 struct BatchLinearSystemGPU{T,Ti}

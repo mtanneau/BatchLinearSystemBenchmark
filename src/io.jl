@@ -28,6 +28,10 @@ function load_from_h5(f5path::AbstractString; nbatch=-1)
     # How many systems do we have?
     num_systems = d["num_systems"]
 
+    is_uniform = d["is_uniform_batch"]
+    mtype = MatrixType(d["matrix_type"])
+    mview = MatrixViewType(d["matrix_view"])
+
     if nbatch == -1 || nbatch > num_systems
         nbatch = num_systems
     end
@@ -45,7 +49,12 @@ function load_from_h5(f5path::AbstractString; nbatch=-1)
         end
     end
 
-    return BatchLinearSystemCPU(As, bs)
+    xs = [
+        zeros(Float64, size(A, 2))
+        for A in As
+    ]
+
+    return BatchLinearSystemCPU(nbatch, is_uniform, mtype, mview, As, bs, xs)
 end
 
 function save_to_h5(f5path::AbstractString, B::BatchLinearSystemCPU)
@@ -54,43 +63,34 @@ function save_to_h5(f5path::AbstractString, B::BatchLinearSystemCPU)
 
     # Grab batch metadata
     num_systems = length(As)
-    is_uniform_batch = (
-        allequal(size, As) && allequal(x -> x.colptr, As) && allequal(x -> x.rowval, As)
-    )  # a batch is uniform if all matrices have same sparsity pattern
-    is_symmetric_batch = all(
-        issymmetric(A) for A in As
-    )  # a batch is symmetric is all matrices are symmetric
-
-    metadata = Dict{String,Any}(
-        "num_systems" => num_systems,
-        "is_uniform_batch" => is_uniform_batch,
-        "is_symmetric_batch" => is_symmetric_batch,
-        "nrow_min" => minimum(size(A, 1) for A in As),
-        "nrow_max" => maximum(size(A, 1) for A in As),
-        "ncol_min" => minimum(size(A, 2) for A in As),
-        "ncol_max" => maximum(size(A, 2) for A in As),
-        "nzz_min" => minimum(nnz(A) for A in As),
-        "nzz_max" => maximum(nnz(A) for A in As),
-    )
 
     # Save to disk
-    h5open(f5path, "w") do io
-        gmeta = create_goup(io, "meta")
-        write(gmeta, "meta", metadata)
+    HDF5.h5open(f5path, "w") do io
+        gmeta = HDF5.create_group(io, "meta")
+
+        HDF5.write(gmeta, "num_systems", num_systems)
+        HDF5.write(gmeta, "is_uniform_batch", B.is_uniform)
+        HDF5.write(gmeta, "matrix_type", string(B.mtype))
+        HDF5.write(gmeta, "matrix_view", string(B.mview))
+        HDF5.write(gmeta, "nrow_min", minimum(size(A, 1) for A in As))
+        HDF5.write(gmeta, "nrow_max", maximum(size(A, 1) for A in As))
+        HDF5.write(gmeta, "ncol_min", minimum(size(A, 2) for A in As))
+        HDF5.write(gmeta, "ncol_max", maximum(size(A, 2) for A in As))
+        HDF5.write(gmeta, "nzz_min", minimum(nnz(A) for A in As))
+        HDF5.write(gmeta, "nzz_max", maximum(nnz(A) for A in As))
 
         for i in 1:num_systems
-            g = create_group(io, "$i")
+            g = HDF5.create_group(io, "$i")
 
             A = As[i]
             b = bs[i]
-            write(g, k2, v2)
-            write(g, "lhs_numrows", size(A, 1))
-            write(g, "lhs_numcols", size(A, 2))
-            write(g, "lhs_nzz", nnz(A))
-            write(g, "lhs_colPtr", A.colptr)
-            write(g, "lhs_rowVal", A.rowval)
-            write(g, "lhs_nzVal", A.nzval)
-            write(g, "rhs", b)
+            HDF5.write(g, "lhs_numrows", size(A, 1))
+            HDF5.write(g, "lhs_numcols", size(A, 2))
+            HDF5.write(g, "lhs_nzz", nnz(A))
+            HDF5.write(g, "lhs_colPtr", A.colptr)
+            HDF5.write(g, "lhs_rowVal", A.rowval)
+            HDF5.write(g, "lhs_nzVal", A.nzval)
+            HDF5.write(g, "rhs", b)
         end
     end
 
