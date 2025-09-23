@@ -14,7 +14,7 @@ name(::CUDSSUniformBatchSolver) = "CUDSS_UniformBatch"
 function solve!(B::UniformBatchLinearSystemGPU{T}, s::CUDSSUniformBatchSolver; nsolve=1) where{T}
     m = B.nrows
     n = B.ncols
-    k = B.batch_size
+    k = batch_size(B)
 
     cudss_rhs = CudssMatrix(T, m; nbatch=k)
     cudss_set(cudss_rhs, B.b_dat)
