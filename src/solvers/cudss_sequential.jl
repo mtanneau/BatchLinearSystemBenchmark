@@ -9,6 +9,7 @@ Solves batch of linear systems sequentially using CUDSS.
 end
 
 batch_type(::CUDSSSequentialSolver) = BatchLinearSystemGPU
+name(::CUDSSSequentialSolver) = "CUDSS_Sequential"
 
 function solve!(B::BatchLinearSystemGPU, s::CUDSSSequentialSolver; nsolve=1)
     K = length(B.As)  # batch size
