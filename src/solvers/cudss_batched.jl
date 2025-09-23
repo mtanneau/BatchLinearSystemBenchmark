@@ -8,6 +8,8 @@ Solves batch of linear systems in batch using CUDSS' batch solver interface.
     view::Char='F'
 end
 
+batch_type(::CUDSSBatchSolver) = BatchLinearSystemGPU
+
 function solve!(B::BatchLinearSystemGPU, s::CUDSSBatchSolver; nsolve=1)
     
     CUDA.@sync begin

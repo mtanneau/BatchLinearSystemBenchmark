@@ -9,6 +9,8 @@ Solves batch of linear systems sequentially using CPU-based LU solver.
 @kwdef struct KLUSequentialSolver
 end
 
+batch_type(::KLUSequentialSolver) = BatchLinearSystemCPU
+
 function solve!(B::BatchLinearSystemCPU, s::KLUSequentialSolver; nsolve=1)
     K = length(B.As)  # batch size
 

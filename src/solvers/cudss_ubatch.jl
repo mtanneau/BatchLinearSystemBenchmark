@@ -8,6 +8,8 @@ Solves batch of linear systems in batch using CUDSS' uniform batch solver interf
     view::Char='F'
 end
 
+batch_type(::CUDSSUniformBatchSolver) = UniformBatchLinearSystemGPU
+
 function solve!(B::UniformBatchLinearSystemGPU{T}, s::CUDSSUniformBatchSolver; nsolve=1) where{T}
     m = B.nrows
     n = B.ncols
