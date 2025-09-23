@@ -102,7 +102,14 @@ function BatchLinearSystemCPU(As::Vector{SparseMatrixCSC{T,Int}}, bs::Vector{Vec
     return BatchLinearSystemCPU{T}(nbatch, is_uniform, mt, mv, As, bs, xs)
 end
 
+batch_size(B::BatchLinearSystemCPU) = B.nbatch
+
 struct BatchLinearSystemGPU{T,Ti}
+    nbatch::Int
+    is_uniform::Bool
+    mtype::MatrixType
+    mview::MatrixViewType
+
     As::Vector{CUDA.CUSPARSE.CuSparseMatrixCSR{T,Ti}}  # Vector of sparse matrices (LHS)
     bs::Vector{CuVector{T}}                            # Vector of dense RHS
     xs::Vector{CuVector{T}}                            # Vector of dense solution
@@ -116,24 +123,26 @@ function BatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
     bs_gpu = [CUDA.CuArray(B.bs[i]) for i in 1:K]
     xs_gpu = [CUDA.zeros(T, size(bs_gpu[i])) for i in 1:K]
     
-    return BatchLinearSystemGPU{T,Cint}(As_gpu, bs_gpu, xs_gpu)
+    return BatchLinearSystemGPU{T,Cint}(B.nbatch, B.is_uniform, B.mtype, B.mview, As_gpu, bs_gpu, xs_gpu)
 end
 
+batch_size(B::BatchLinearSystemGPU) = B.nbatch
+
 struct UniformBatchLinearSystemGPU{T}
-    batch_size::Int
+    nbatch::Int
     nrows::Int
     ncols::Int
 
     # LHS data
     rowPtr::CuVector{Cint}
     colVal::CuVector{Cint}
-    nzVal::CuVector{T}  # size nnz * batch_size
+    nzVal::CuVector{T}  # size nnz * nbatch
 
     # RHS data
-    x_dat::CuVector{T}  # size ncols * batch_size
+    x_dat::CuVector{T}  # size ncols * nbatch
 
     # Solution data
-    b_dat::CuVector{T}  # size nrows * batch_size
+    b_dat::CuVector{T}  # size nrows * nbatch
 end
 
 function UniformBatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
@@ -144,7 +153,7 @@ function UniformBatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
     )
     is_uniform_batch || throw(DimensionMismatch("All matrices must have the same sparsity pattern"))
 
-    k = length(B.As)  # batch size
+    k = batch_size(B)  # batch size
     m, n = size(B.As[1])
 
     # Move data to GPU
@@ -161,3 +170,5 @@ function UniformBatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
     
     return UniformBatchLinearSystemGPU{T}(k, m, n, rowPtr, colVal, nzVal, x_dat, b_dat)
 end
+
+batch_size(B::UniformBatchLinearSystemGPU) = B.nbatch

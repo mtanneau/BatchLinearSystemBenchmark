@@ -28,9 +28,9 @@ function load_from_h5(f5path::AbstractString; nbatch=-1)
     # How many systems do we have?
     num_systems = d["num_systems"]
 
-    is_uniform = d["is_uniform_batch"]
-    mtype = MatrixType(d["matrix_type"])
-    mview = MatrixViewType(d["matrix_view"])
+    is_uniform = get(d, "is_uniform_batch", false)
+    mtype = MatrixType(get(d, "matrix_type", "GEN"))
+    mview = MatrixViewType(get(d, "matrix_view", "F"))
 
     if nbatch == -1 || nbatch > num_systems
         nbatch = num_systems
