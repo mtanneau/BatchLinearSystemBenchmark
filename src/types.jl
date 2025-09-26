@@ -75,6 +75,34 @@ function Base.string(mv::MatrixViewType)::String
     end
 end
 
+function cudss_matrix_view(mview::MatrixType)
+    if mview == MatrixView_Full
+        return 'F'
+    elseif mview == MatrixView_Lower
+        return 'L'
+    elseif mview == MatrixView_Upper
+        return 'U'
+    else
+        error("Invalid MatrixViewType: $(mview)")
+    end
+end
+
+function cudss_matrix_type(mtype::MatrixType)
+    if mtype == MatrixType_GEN
+        return "G"
+    elseif mtype == MatrixType_SYM
+        return "S"
+    elseif mtype == MatrixType_SPD
+        return "SPD"
+    elseif mtype == MatrixType_HER
+        return "H"
+    elseif mtype == MatrixType_HPD
+        return "HPD"
+    else
+        error("Invalid MatrixType: $(mtype)")
+    end
+end
+
 struct BatchLinearSystemCPU{T}
     nbatch::Int
     is_uniform::Bool
@@ -102,7 +130,10 @@ function BatchLinearSystemCPU(As::Vector{SparseMatrixCSC{T,Int}}, bs::Vector{Vec
     return BatchLinearSystemCPU{T}(nbatch, is_uniform, mt, mv, As, bs, xs)
 end
 
+# Accessors
 batch_size(B::BatchLinearSystemCPU) = B.nbatch
+matrix_type(B::BatchLinearSystemCPU) = B.mtype
+matrix_view(B::BatchLinearSystemCPU) = B.mview
 
 struct BatchLinearSystemGPU{T,Ti}
     nbatch::Int
@@ -126,12 +157,17 @@ function BatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
     return BatchLinearSystemGPU{T,Cint}(B.nbatch, B.is_uniform, B.mtype, B.mview, As_gpu, bs_gpu, xs_gpu)
 end
 
+# Accessors
 batch_size(B::BatchLinearSystemGPU) = B.nbatch
+matrix_type(B::BatchLinearSystemGPU) = B.mtype
+matrix_view(B::BatchLinearSystemGPU) = B.mview
 
 struct UniformBatchLinearSystemGPU{T}
     nbatch::Int
     nrows::Int
     ncols::Int
+    mtype::MatrixType
+    mview::MatrixViewType
 
     # LHS data
     rowPtr::CuVector{Cint}
@@ -147,11 +183,7 @@ end
 
 function UniformBatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
     # Check that all matrices have the same sparsity pattern
-    is_uniform_batch = all(
-        (size(B.As[1], 1) == size(A, 1)) && (A.colptr == B.As[1].colptr) && (A.rowval == B.As[1].rowval)
-        for A in B.As
-    )
-    is_uniform_batch || throw(DimensionMismatch("All matrices must have the same sparsity pattern"))
+    is_uniform_batch(B.As) || throw(DimensionMismatch("All matrices must have the same sparsity pattern"))
 
     k = batch_size(B)  # batch size
     m, n = size(B.As[1])
@@ -168,7 +200,10 @@ function UniformBatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
     # Solution working memory
     x_dat = CUDA.zeros(T, n*k)
     
-    return UniformBatchLinearSystemGPU{T}(k, m, n, rowPtr, colVal, nzVal, x_dat, b_dat)
+    return UniformBatchLinearSystemGPU{T}(k, m, n, B.mtype, B.mview, rowPtr, colVal, nzVal, x_dat, b_dat)
 end
 
+# Accessors
 batch_size(B::UniformBatchLinearSystemGPU) = B.nbatch
+matrix_type(B::UniformBatchLinearSystemGPU) = B.mtype
+matrix_view(B::UniformBatchLinearSystemGPU) = B.mview
