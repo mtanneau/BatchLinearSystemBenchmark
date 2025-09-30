@@ -75,7 +75,7 @@ function Base.string(mv::MatrixViewType)::String
     end
 end
 
-function cudss_matrix_view(mview::MatrixType)
+function cudss_matrix_view(mview::MatrixViewType)
     if mview == MatrixView_Full
         return 'F'
     elseif mview == MatrixView_Lower
