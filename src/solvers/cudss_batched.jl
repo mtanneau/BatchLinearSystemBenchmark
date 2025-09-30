@@ -6,7 +6,7 @@ Solves batch of linear systems in batch using CUDSS' batch solver interface.
 @kwdef struct CUDSSBatchSolver end
 
 batch_type(::CUDSSBatchSolver) = BatchLinearSystemGPU
-name(::CUDSSBatchSolver) = "CUDSS_Batched"
+name(::CUDSSBatchSolver) = "CUDSS_Batch"
 
 function solve!(B::BatchLinearSystemGPU, s::CUDSSBatchSolver; nsolve=1)
 
