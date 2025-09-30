@@ -22,7 +22,7 @@ Load up to `nbatch` linear systems from HDF5 file. If `nbatch==-1`, load all sys
 
 Returns a `BatchLinearSystemCPU{Float64}` instance.
 """
-function load_from_h5(f5path::AbstractString; nbatch=-1)
+function load_from_h5(f5path::AbstractString; nbatch=-1, check_uniform=true)
     d = h5read(f5path, "meta")
 
     # How many systems do we have?
@@ -47,6 +47,12 @@ function load_from_h5(f5path::AbstractString; nbatch=-1)
             push!(As, A)
             push!(bs, b)
         end
+    end
+
+    # Re-check whether batch is uniform
+    if check_uniform
+        # TODO: check consistency with metadata
+        is_uniform = _is_uniform_batch(As)
     end
 
     xs = [

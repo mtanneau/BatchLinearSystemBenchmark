@@ -183,7 +183,7 @@ end
 
 function UniformBatchLinearSystemGPU(B::BatchLinearSystemCPU{T}) where T
     # Check that all matrices have the same sparsity pattern
-    is_uniform_batch(B.As) || throw(DimensionMismatch("All matrices must have the same sparsity pattern"))
+    _is_uniform_batch(B.As) || throw(DimensionMismatch("All matrices must have the same sparsity pattern"))
 
     k = batch_size(B)  # batch size
     m, n = size(B.As[1])

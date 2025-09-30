@@ -33,10 +33,10 @@ function compute_residuals(B::BatchLinearSystemGPU; to_cpu=true)
 end
 
 function compute_residuals(B::UniformBatchLinearSystemGPU{T}; to_cpu=true) where{T}
-    k = B.batch_size
+    k = batch_size(B)
     m = B.nrows
     n = B.ncols
-    nnzA, q = divrem(length(B.nzVal), B.batch_size)
+    nnzA, q = divrem(length(B.nzVal), k)
     q == 0 || error("Inconsistent size for nzVal")
 
     Rs_gpu = CuVector{T}[]
