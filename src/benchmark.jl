@@ -94,8 +94,9 @@ function benchmark(B, solver; nsolve=1)
 end
 
 function profile(B, solver)
+    b = batch_size(B)
     # Solve batch system only once, to generate profile traces
-    NVTX.@range "$(name(solver))" begin
+    NVTX.@range "$(name(solver))x$(b)" begin
         CUDA.@sync solve!(B, solver; nsolve=1)
     end
 
@@ -215,7 +216,49 @@ function main_benchmark(args)
     return all_results
 end
 
-function main_profile(args) end
+function main_profile(args) 
+    # Overall setup
+    BLAS.set_num_threads(args["blas-threads"])
+
+    # Load data
+    println("Loading data and prepping batch forms...")
+    meta = h5read(args["dataset"], "meta")
+
+    if length(args["batch-size"]) != 1
+        println("ERROR: exactly one batch size must be provided in profiling mode (received $(length(args["batch-size"])))")
+        return nothing
+    end
+
+    batch_size = args["batch-size"][1]
+    if batch_size > meta["num_systems"]
+        println("    WARNING: batch size ($batch_size) is larger than number of systems in dataset ($(meta["num_systems"]))")
+    end
+
+    B_cpu, B_gpu, B_uni = prep_benchmark_data(args["dataset"]; nbatch=batch_size)
+
+    for solver_name in args["solver"]
+        # Map solver names to solver instances
+        println("Benchmarking linear solver $(solver_name)")
+        solver_type = SOLVER_MAP[solver_name]
+        solver = solver_type()
+
+        # Figure out which data to use
+        _batch_data = if typeof(solver) in [CUDSSUniformBatchSolver]
+            B_uni
+        elseif typeof(solver) in [CUDSSSequentialSolver, CUDSSBatchSolver]
+            B_gpu
+        elseif typeof(solver) in [KLUSequentialSolver]
+            B_cpu
+        else
+            error("Unknown solver type: $(typeof(solver))")
+        end
+
+        # Run a single solve to generate profile traces
+        profile(_batch_data, solver)
+    end
+
+    return nothing
+end
 
 function main_cl()
     parsed_args = parse_commandline()
@@ -238,7 +281,6 @@ function main_cl()
         exit(0)
     end
     
-
     # Done
     exit(0)
 end
