@@ -201,7 +201,7 @@ function main_benchmark(args)
         end
     end
 
-    return res
+    return all_results
 end
 
 function main_profile(args) end
