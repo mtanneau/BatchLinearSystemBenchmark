@@ -114,3 +114,14 @@ A batch is _uniform_ if all matrices $A_{k}$ share the same sparsity pattern.
 * the KLU implementation does not re-use the factorization object when working with uniform batches
 * the CUDSS solvers do not leverage matching nor iterative refinement.
     Note that this is a limitation of this code, i.e., these features are implemented in CUDSS
+
+## Acknowledgements
+
+This work was made possible thanks to the support (direct or indirect) of the following institutions and people:
+* Michael Klamkin ([@klamike](https://github.com/klamike)) and Andrew Rosemberg ([@andrewrosemberg](https://github.com/andrewrosemberg)),
+    who contributed to the development of underlying datasets and early benchmarking efforts in [BatchNLPSolver.jl](https://github.com/LearningToOptimize/BatchNLPSolver.jl)
+* The organizers of the [2025 PSC/CMU/Pitt Open Hackathon](https://www.openhackathons.org/s/siteevent/a0CUP00000rxGGo2AM/se000359),
+    and especially our team's mentor, Lars Nyland
+* The [Geogia Tech Partnership for an Advanced Computing Environment](https://pace.gatech.edu/) (PACE),
+    whose Phoenix cluster was used to develop this tool
+* The [CUDSS.jl](https://github.com/exanauts/CUDSS.jl) developers, with special thanks to Alexis Montoison ([@amontoison](https://github.com/amontoison)) for technical advice on how to use CUDSS
