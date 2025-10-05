@@ -80,14 +80,12 @@ app.layout = html.Div(
                 html.H2("Execution Time"),
                 dcc.Graph(id="execution-time-graph"),
             ],
-            style={"width": "100%", "aspectRatio": "16/9"},
         ),
         html.Div(
             [
                 html.H2("Numerical Accuracy"),
                 dcc.Graph(id="residual-graph"),
             ],
-            style={"width": "100%", "aspectRatio": "16/9"},
         ),
     ]
 )
