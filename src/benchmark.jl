@@ -135,8 +135,8 @@ function parse_commandline()
         "--profile"
             help = "Run in profiling mode (with Nsight Systems)"
             action = :store_true
-        "--output"
-            help = "Path to output CSV file"
+        "--output-dir"
+            help = "Path to output directory where results will be saved. No results are exported if empty string"
             arg_type=String
             default=""
     end
@@ -183,6 +183,16 @@ function main_benchmark(args)
 
             # Execute benchmark for this solver & batch size
             res_benchmark = benchmark(_batch_data, solver; nsolve=args["num-solve"])
+            # Add extra info
+            for (k, v) in meta
+                if haskey(res_benchmark, k) && res_benchmark[k] != v
+                    @warn "Duplicate key in meta vs benchmark results: $k"
+                    continue
+                else
+                    res_benchmark[k] = v
+                end
+            end
+            res_benchmark["dataset"] = args["dataset"]
             # Put results in a dictionary
             res = Dict(
                 "num_threads" => Base.Threads.nthreads(),
@@ -191,13 +201,14 @@ function main_benchmark(args)
                 "benchmark" => res_benchmark,
             )
             push!(all_results, res)
-        end
-    end
 
-    # Export benchmark results to JSON for later use
-    if args["output"] != ""
-        open(args["output"], "w") do io
-            JSON.print(io, all_results, 2)
+            # Export benchmark results to JSON for later use
+            if args["output-dir"] != ""
+                mkpath(args["output-dir"])
+                open(joinpath(args["output-dir"], "s$(solver_name)_b$(batch_size).bench.json"), "w") do io
+                    JSON.print(io, res_benchmark, 2)
+                end
+            end
         end
     end
 
