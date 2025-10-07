@@ -33,7 +33,7 @@ You can skip this step if you only want to browse some pre-existing benchmark re
 
 ### download batch linear systems dataset
 
-TODO
+⚠️ DiffOpt linear systems will be made available shortly. At the moment, only sample linear systems are provided in `data/sample`
 
 
 ## Quick Start
