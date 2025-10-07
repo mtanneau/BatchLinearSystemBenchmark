@@ -86,9 +86,9 @@ nsys profile julia --project=. -t8 src/benchmark.jl \
 ### Mathematical background
 
 We consider batch linear systems of the form
-$$
+```math
     A_{k} x_{k} = b_{k}, \forall k \in \{1, ..., K\}
-$$
+```
 where $K$ denotes the _batch size_.
 A batch is _uniform_ if all matrices $A_{k}$ share the same sparsity pattern.
 
